@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alpha — UCP Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0f0f0f;
+  --surf:    #1a1a1a;
+  --panel:   #202020;
+  --bd:      #2e2e2e;
+  --bd2:     #3a3a3a;
+  --teal:    #00d4aa;
+  --blue:    #00a3cc;
+  --pink:    #ff6b9d;
+  --txt:     #f0f0f0;
+  --muted:   #888;
+  --dim:     #4a4a4a;
+  --red:     #ff5f5f;
+  --orange:  #f5a623;
+  --mono:    'Geist Mono', monospace;
+  --sans:    'Geist', system-ui, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);font-size:13px;line-height:1.5;display:flex;flex-direction:column}
+
+/* ══ LAYOUT ══ */
+.app{display:flex;flex:1;min-height:0;height:100vh;overflow:hidden}
+
+/* ══ SIDEBAR ══ */
+.sidebar{
+  width:224px;flex-shrink:0;
+  background:var(--surf);
+  border-right:1px solid var(--bd);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  transition:transform 0.22s ease;
+  z-index:50;
+}
+.sidebar.hidden{transform:translateX(-100%)}
+@media(max-width:720px){
+  .sidebar{position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay{display:block}
+}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40}
+.sidebar-overlay.show{display:block}
+
+.brand{padding:18px 16px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.brand-mark{width:28px;height:28px;background:var(--teal);color:#000;font-family:var(--mono);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-name{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.brand-name small{color:var(--muted);font-weight:400}
+
+.nav-group{padding:12px 8px 4px}
+.nav-group-label{font-size:10px;font-weight:500;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;padding:0 8px;margin-bottom:4px}
+.nav-btn{
+  display:flex;align-items:center;gap:9px;
+  width:100%;padding:7px 8px;border-radius:5px;
+  background:none;border:none;cursor:pointer;
+  color:var(--muted);font-family:var(--sans);font-size:13px;
+  text-align:left;transition:background .1s,color .1s;
+}
+.nav-btn:hover{background:var(--panel);color:var(--txt)}
+.nav-btn.active{background:var(--panel);color:var(--txt)}
+.nav-btn.active .nav-ic{color:var(--teal)}
+.nav-ic{font-style:normal;width:16px;text-align:center;font-size:13px}
+.nav-badge{margin-left:auto;font-size:10px;background:var(--panel);border:1px solid var(--bd2);color:var(--muted);padding:1px 6px;border-radius:3px;font-family:var(--mono)}
+
+.sidebar-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--bd);font-size:10px;color:var(--dim);line-height:1.7}
+
+/* ══ MAIN ══ */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow-y:auto}
+
+/* ══ TOPBAR ══ */
+.topbar{
+  height:48px;border-bottom:1px solid var(--bd);
+  background:var(--surf);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.hamburger{display:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px}
+@media(max-width:720px){.hamburger{display:flex}}
+.topbar-title{font-size:13px;font-weight:500}
+.breadcrumb{font-size:11px;color:var(--dim);font-family:var(--mono)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.topbar-pill{font-size:10px;padding:3px 10px;border:1px solid var(--bd2);border-radius:3px;color:var(--muted);font-family:var(--mono)}
+
+/* ══ PAGES ══ */
+.page{display:none;padding:28px;flex:1}
+.page.active{display:block}
+.pg-head{margin-bottom:24px}
+.pg-head h1{font-size:20px;font-weight:600;letter-spacing:-.025em;margin-bottom:3px}
+.pg-head p{font-size:12px;color:var(--muted)}
+
+/* ══ SECTION BLOCKS ══ */
+.block{border:1px solid var(--bd);margin-bottom:1px}
+.block+.block{border-top:none}
+.pane{background:var(--panel);padding:20px 22px}
+.pane-hd{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.pane-hd span{color:var(--muted);text-transform:none;letter-spacing:0;font-size:11px;font-weight:400}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bd)}
+.split > .pane{margin-bottom:0}
+.triple{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--bd)}
+.quad{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.five{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+@media(max-width:720px){
+  .split{grid-template-columns:1fr}
+  .triple{grid-template-columns:1fr 1fr}
+  .quad{grid-template-columns:1fr 1fr}
+  .five{grid-template-columns:1fr 1fr}
+  .page{padding:16px}
+}
+
+/* ══ FORM ══ */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field>label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+input[type=text],input[type=number],select{
+  background:var(--surf);border:1px solid var(--bd2);
+  color:var(--txt);font-family:var(--sans);font-size:13px;
+  padding:7px 10px;width:100%;outline:none;border-radius:4px;
+  -webkit-appearance:none;transition:border-color .15s;
+}
+input:focus,select:focus{border-color:var(--teal)}
+input::placeholder{color:var(--dim)}
+
+.dyn-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.dyn-row input{flex:1}
+.rm-btn{
+  width:30px;height:30px;border-radius:4px;
+  background:var(--surf);border:1px solid var(--bd2);
+  color:var(--muted);cursor:pointer;font-size:15px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .12s;font-family:var(--sans);
+}
+.rm-btn:hover{border-color:var(--red);color:var(--red);background:rgba(255,95,95,.08)}
+
+/* ══ WEIGHT CELLS ══ */
+.wt-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+.wt-cell{
+  background:var(--surf);border:1px solid var(--bd2);
+  border-radius:4px;padding:8px 12px;
+  display:flex;align-items:center;gap:8px;
+}
+.wt-cell label{font-size:11px;color:var(--muted);white-space:nowrap}
+.wt-cell input{
+  width:42px;padding:3px 6px;text-align:center;
+  font-family:var(--mono);font-size:13px;font-weight:600;
+  color:var(--teal);background:transparent;
+  border:none;border-bottom:1px solid var(--bd2);border-radius:0;
+}
+.wt-cell input:focus{border-color:var(--teal);outline:none}
+.wt-cell span{font-size:12px;color:var(--dim)}
+
+/* ══ BUTTONS ══ */
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.btn{font-family:var(--sans);font-size:12px;font-weight:500;padding:7px 16px;border-radius:4px;cursor:pointer;border:none;transition:all .12s}
+.btn-p{background:var(--teal);color:#000}
+.btn-p:hover{background:#00ecc0}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd2)}
+.btn-g:hover{color:var(--txt);border-color:var(--bd2);background:var(--surf)}
+.btn-add{background:transparent;color:var(--muted);border:1px dashed var(--bd2);font-size:11px;margin-top:8px}
+.btn-add:hover{color:var(--teal);border-color:var(--teal)}
+
+/* ══ RESULT ══ */
+.result{display:none;border-top:1px solid var(--bd);margin-top:20px;padding-top:20px}
+.result.show{display:block}
+.result-main{display:flex;align-items:flex-end;gap:32px;flex-wrap:wrap;margin-bottom:14px}
+.r-big{font-size:52px;font-weight:700;letter-spacing:-.04em;font-family:var(--mono);color:var(--teal);line-height:1}
+.r-grade{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.r-info{display:flex;flex-direction:column;gap:10px;padding-bottom:4px}
+.r-info-item label{display:block;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.r-info-item span{font-size:16px;font-weight:600;font-family:var(--mono)}
+.progress-track{height:2px;background:var(--bd2);margin-top:10px;position:relative}
+.progress-fill{height:100%;background:var(--teal);transition:width .7s cubic-bezier(.22,1,.36,1)}
+.progress-ticks{display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-top:5px;font-family:var(--mono)}
+.breakdown{font-size:11px;color:var(--dim);font-family:var(--mono);margin-top:12px;display:flex;flex-wrap:wrap;gap:10px}
+.bk-item{display:flex;flex-direction:column;gap:1px}
+.bk-k{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.bk-v{color:var(--teal);font-size:13px;font-weight:600}
+
+/* ══ STATS ROW ══ */
+.stats-row{display:flex;gap:1px;background:var(--bd);border:1px solid var(--bd);margin-top:16px}
+.stat-box{flex:1;background:var(--panel);padding:16px 20px}
+.stat-n{font-size:32px;font-weight:700;font-family:var(--mono);letter-spacing:-.03em;color:var(--teal);line-height:1;margin-bottom:4px}
+.stat-l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}
+
+/* ══ COURSE ROWS ══ */
+.course-hd{display:grid;grid-template-columns:1fr 80px 110px 32px;gap:8px;margin-bottom:6px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:0 2px}
+.course-row{display:grid;grid-template-columns:1fr 80px 110px 32px;gap:8px;align-items:center;margin-bottom:6px}
+@media(max-width:500px){
+  .course-hd,.course-row{grid-template-columns:1fr 60px 85px 28px}
+}
+
+/* ══ TABLE ══ */
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}
+thead tr{border-bottom:1px solid var(--bd)}
+th{text-align:left;padding:7px 10px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;font-weight:500}
+td{padding:9px 10px;border-bottom:1px solid var(--bd);color:var(--muted)}
+td:first-child{color:var(--txt)}
+tr.total-row td{color:var(--txt);font-weight:600;border-top:1px solid var(--bd2);border-bottom:none}
+.tag{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:3px}
+.tag-teal{background:rgba(0,212,170,.12);color:var(--teal)}
+.tag-red{background:rgba(255,95,95,.12);color:var(--red)}
+.tag-blue{background:rgba(0,163,204,.12);color:var(--blue)}
+
+/* ══ PREDICTION RESULT ══ */
+.pred-out{display:none;margin-top:20px;border-top:1px solid var(--bd);padding-top:20px}
+
+/* ══ ATTENDANCE ══ */
+.att-track{height:3px;background:var(--bd2);position:relative;margin:10px 0 5px}
+.att-fill{height:100%;transition:width .6s ease}
+.att-fill.ok{background:var(--teal)}
+.att-fill.bad{background:var(--red)}
+.att-marker{position:absolute;top:-6px;left:75%;width:1px;height:15px;background:var(--orange)}
+.att-marker::after{content:'75%';position:absolute;top:-14px;left:-10px;font-size:9px;color:var(--orange);font-family:var(--mono)}
+.notice{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:4px;font-size:12px;margin-top:12px}
+.notice.ok{background:rgba(0,212,170,.08);color:var(--teal);border:1px solid rgba(0,212,170,.2)}
+.notice.bad{background:rgba(255,95,95,.08);color:var(--red);border:1px solid rgba(255,95,95,.2)}
+.att-dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:14px}
+.att-dot{width:10px;height:10px;border-radius:2px}
+.att-dot.p{background:var(--teal)}
+.att-dot.a{background:var(--bd2)}
+
+/* ══ ERROR ══ */
+.err{font-size:11px;color:var(--red);margin-top:6px;display:none}
+
+/* ══ TOAST ══ */
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid var(--bd2);
+  color:var(--txt);padding:8px 18px;font-size:12px;
+  border-radius:4px;display:none;z-index:200;
+}
+.toast.show{display:block;animation:fadeit 2.2s ease forwards}
+@keyframes fadeit{
+  0%{opacity:0;transform:translateX(-50%) translateY(8px)}
+  12%{opacity:1;transform:translateX(-50%) translateY(0)}
+  78%{opacity:1}
+  100%{opacity:0}
+}
+
+/* ══ GRADE SCALE COLORS ══ */
+.grade-A{color:var(--teal)} .grade-B{color:var(--blue)} .grade-C{color:var(--orange)} .grade-D{color:var(--muted)} .grade-F{color:var(--red)}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-mark">α</div>
+    <div class="brand-name">Alpha <small>/ UCP</small></div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Calculator</div>
+    <button class="nav-btn active" data-tab="grade">
+      <i class="nav-ic">◈</i> Grade Calculator
+    </button>
+    <button class="nav-btn" data-tab="cgpa">
+      <i class="nav-ic">◉</i> CGPA Calculator
+    </button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Tools</div>
+    <button class="nav-btn" data-tab="predict">
+      <i class="nav-ic">◎</i> GPA Prediction
+    </button>
+    <button class="nav-btn" data-tab="whatif">
+      <i class="nav-ic">⟁</i> What-If Simulator
+    </button>
+    <button class="nav-btn" data-tab="attend">
+      <i class="nav-ic">▦</i> Attendance Check
+    </button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Reference</div>
+    <button class="nav-btn" data-tab="scale">
+      <i class="nav-ic">≡</i> Grade Scale
+    </button>
+  </div>
+
+  <div class="sidebar-foot">
+    University of Central Punjab<br>
+    Official Grading System<br>
+    <span style="color:var(--teal)">6 features</span>
+  </div>
+</aside>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<div class="main">
+
+  <!-- topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+      <span class="topbar-title" id="topTitle">Grade Calculator</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-pill">UCP</span>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────
+       PAGE 1 — GRADE CALCULATOR
+  ───────────────────────────────────────────── -->
+  <div class="page active" id="page-grade">
+    <div class="pg-head">
+      <h1>Course Grade Calculator</h1>
+      <p>Weighted average using UCP's official formula — weights must total 100%</p>
+    </div>
+
+    <!-- Weights -->
+    <div class="block">
+      <div class="pane">
+        <div class="pane-hd">Weight Distribution <span>editable · must sum to 100</span></div>
+        <div class="wt-row">
+          <div class="wt-cell"><label>Quizzes</label><input type="number" id="w-quiz" value="10" min="0" max="100"><span>%</span></div>
+          <div class="wt-cell"><label>Assignments</label><input type="number" id="w-assign" value="5" min="0" max="100"><span>%</span></div>
+          <div class="wt-cell"><label>Project</label><input type="number" id="w-proj" value="10" min="0" max="100"><span>%</span></div>
+          <div class="wt-cell"><label>Midterm</label><input type="number" id="w-mid" value="30" min="0" max="100"><span>%</span></div>
+          <div class="wt-cell"><label>Final</label><input type="number" id="w-final" value="40" min="0" max="100"><span>%</span></div>
+          <div class="wt-cell"><label>Participation</label><input type="number" id="w-part" value="5" min="0" max="100"><span>%</span></div>
+        </div>
+        <div class="err" id="wErr">Weights must total 100. Current total: <span id="wTotal"></span>%</div>
+      </div>
+    </div>
+
+    <!-- Quizzes + Assignments -->
+    <div class="block split">
+      <div class="pane">
+        <div class="pane-hd">Quizzes <span>out of 10 each</span></div>
+        <div id="quizInputs">
+          <div class="dyn-row"><input type="number" placeholder="Quiz 1" min="0" max="10" step="0.1"><button class="rm-btn" onclick="removeRow(this)">−</button></div>
+          <div class="dyn-row"><input type="number" placeholder="Quiz 2" min="0" max="10" step="0.1"><button class="rm-btn" onclick="removeRow(this)">−</button></div>
+        </div>
+        <button class="btn btn-add" id="addQuiz">+ Add Quiz</button>
+      </div>
+      <div class="pane">
+        <div class="pane-hd">Assignments <span>out of 10 each</span></div>
+        <div id="assignInputs">
+          <div class="dyn-row"><input type="number" placeholder="Assignment 1" min="0" max="10" step="0.1"><button class="rm-btn" onclick="removeRow(this)">−</button></div>
+        </div>
+        <button class="btn btn-add" id="addAssign">+ Add Assignment</button>
+      </div>
+    </div>
+
+    <!-- Other marks -->
+    <div class="block">
+      <div class="pane">
+        <div class="pane-hd">Other Components <span>out of 100</span></div>
+        <div class="quad">
+          <div class="field"><label>Project / Presentation</label><input type="number" id="g-proj" placeholder="75" min="0" max="100"></div>
+          <div class="field"><label>Mid Term</label><input type="number" id="g-mid" placeholder="68" min="0" max="100"></div>
+          <div class="field"><label>Final Term</label><input type="number" id="g-final" placeholder="72" min="0" max="100"></div>
+          <div class="field"><label>Class Participation</label><input type="number" id="g-part" placeholder="90" min="0" max="100"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-p" id="calcGrade">Calculate Grade</button>
+      <button class="btn btn-g" id="resetGrade">Reset</button>
+      <button class="btn btn-g" id="shareBtn">Copy Result</button>
+    </div>
+
+    <!-- Result -->
+    <div class="result" id="gradeResult">
+      <div class="result-main">
+        <div>
+          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Final Score</div>
+          <div class="r-big" id="rPct">—</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Letter Grade</div>
+          <div class="r-grade" id="rLetter">—</div>
+        </div>
+        <div class="r-info">
+          <div class="r-info-item"><label>GPA Points</label><span id="rGP">—</span></div>
+          <div class="r-info-item"><label>Status</label><span id="rStatus">—</span></div>
+          <div class="r-info-item"><label>Performance</label><span id="rPerf">—</span></div>
+        </div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="rBar" style="width:0%"></div></div>
+      <div class="progress-ticks"><span>0</span><span>50</span><span>75</span><span>86</span><span>100</span></div>
+      <div class="breakdown" id="breakdown"></div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────
+       PAGE 2 — CGPA
+  ───────────────────────────────────────────── -->
+  <div class="page" id="page-cgpa">
+    <div class="pg-head">
+      <h1>CGPA Calculator</h1>
+      <p>∑(credit hours × grade points) ÷ total credit hours</p>
+    </div>
+
+    <div class="block">
+      <div class="pane">
+        <div class="pane-hd">Courses</div>
+        <div class="course-hd"><span>Course Name</span><span>Credits</span><span>Grade</span><span></span></div>
+        <div id="courseList"></div>
+        <button class="btn btn-add" id="addCourse">+ Add Course</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-p" id="calcCGPA">Calculate CGPA</button>
+      <button class="btn btn-g" id="resetCGPA">Reset</button>
+    </div>
+
+    <div id="cgpaOut" style="display:none">
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-n" id="outCGPA">0.00</div><div class="stat-l">CGPA</div></div>
+        <div class="stat-box"><div class="stat-n" id="outTotalCH">0</div><div class="stat-l">Total Credits</div></div>
+        <div class="stat-box"><div class="stat-n" id="outQP">0.00</div><div class="stat-l">Quality Points</div></div>
+        <div class="stat-box"><div class="stat-n" id="outGrade">—</div><div class="stat-l">Overall Grade</div></div>
+      </div>
+      <div class="block" style="margin-top:1px">
+        <div class="pane">
+          <div class="pane-hd">Breakdown</div>
+          <table id="cgpaTable">
+            <thead><tr><th>Course</th><th>Credits</th><th>Grade</th><th>GPA Pts</th><th>Quality Pts</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────
+       PAGE 3 — PREDICTION
+  ───────────────────────────────────────────── -->
+  <div class="page" id="page-predict">
+    <div class="pg-head">
+      <h1>GPA Prediction</h1>
+      <p>Enter your known marks and target grade — find out exactly what you need in the final.</p>
+    </div>
+
+    <div class="block split">
+      <div class="pane">
+        <div class="pane-hd">Your Known Marks</div>
+        <div class="field"><label>Quiz Average (out of 10)</label><input type="number" id="p-quiz" placeholder="7.5" min="0" max="10" step="0.1"></div>
+        <div class="field"><label>Assignment Average (out of 10)</label><input type="number" id="p-assign" placeholder="8" min="0" max="10" step="0.1"></div>
+        <div class="field"><label>Project / Presentation (out of 100)</label><input type="number" id="p-proj" placeholder="75" min="0" max="100"></div>
+        <div class="field"><label>Mid Term (out of 100)</label><input type="number" id="p-mid" placeholder="68" min="0" max="100"></div>
+        <div class="field"><label>Class Participation (out of 100)</label><input type="number" id="p-part" placeholder="85" min="0" max="100"></div>
+      </div>
+      <div class="pane">
+        <div class="pane-hd">Target</div>
+        <div class="field">
+          <label>Target Grade</label>
+          <select id="p-target">
+            <option value="86">A  (86–100) — 4.00</option>
+            <option value="82">A- (82–85)  — 3.67</option>
+            <option value="78">B+ (78–81)  — 3.33</option>
+            <option value="74">B  (74–77)  — 3.00</option>
+            <option value="70">B- (70–73)  — 2.67</option>
+            <option value="66">C+ (66–69)  — 2.33</option>
+            <option value="62">C  (62–65)  — 2.00</option>
+            <option value="58">C- (58–61)  — 1.67</option>
+            <option value="54">D+ (54–57)  — 1.33</option>
+            <option value="50">D  (50–53)  — 1.00</option>
+          </select>
+        </div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn btn-p" id="calcPredict">Calculate</button>
+        </div>
+
+        <div class="pred-out" id="predictOut">
+          <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Required Final Score</div>
+          <div class="r-big" id="reqFinal" style="font-size:42px">—</div>
+          <p id="predictMsg" style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────
+       PAGE 4 — WHAT-IF SIMULATOR
+  ───────────────────────────────────────────── -->
+  <div class="page" id="page-whatif">
+    <div class="pg-head">
+      <h1>What-If Simulator</h1>
+      <p>Enter your current marks — see how every possible final score maps to a grade.</p>
+    </div>
+
+    <div class="block">
+      <div class="pane">
+        <div class="pane-hd">Known Marks</div>
+        <div class="five">
+          <div class="field"><label>Quiz Avg (out of 10)</label><input type="number" id="wi-quiz" placeholder="7" min="0" max="10" step="0.1"></div>
+          <div class="field"><label>Assign Avg (out of 10)</label><input type="number" id="wi-assign" placeholder="8" min="0" max="10" step="0.1"></div>
+          <div class="field"><label>Project (out of 100)</label><input type="number" id="wi-proj" placeholder="75" min="0" max="100"></div>
+          <div class="field"><label>Midterm (out of 100)</label><input type="number" id="wi-mid" placeholder="65" min="0" max="100"></div>
+          <div class="field"><label>Participation (out of 100)</label><input type="number" id="wi-part" placeholder="80" min="0" max="100"></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-p" id="runWhatIf">Run Simulation</button></div>
+      </div>
+    </div>
+
+    <div id="whatifOut" style="display:none">
+      <div class="block" style="margin-top:1px">
+        <div class="pane">
+          <div class="pane-hd">All Scenarios <span>final score 30–100%</span></div>
+          <table>
+            <thead>
+              <tr><th>Final Score</th><th>Total %</th><th>Letter Grade</th><th>GPA Points</th><th>Result</th></tr>
+            </thead>
+            <tbody id="wiBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────
+       PAGE 5 — ATTENDANCE
+  ───────────────────────────────────────────── -->
+  <div class="page" id="page-attend">
+    <div class="pg-head">
+      <h1>Attendance Checker</h1>
+      <p>UCP policy: minimum 75% attendance required to sit the Final Exam.</p>
+    </div>
+
+    <div class="block split">
+      <div class="pane">
+        <div class="pane-hd">Input</div>
+        <div class="field"><label>Total Classes Held</label><input type="number" id="att-total" placeholder="40" min="1"></div>
+        <div class="field"><label>Classes Attended</label><input type="number" id="att-attended" placeholder="32" min="0"></div>
+        <div class="btn-row">
+          <button class="btn btn-p" id="calcAtt">Check</button>
+          <button class="btn btn-g" id="resetAtt">Reset</button>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="pane-hd">Result</div>
+        <div id="attResult">
+          <div style="font-size:11px;color:var(--dim)">Enter attendance data and click Check.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="attVisualWrap" style="display:none">
+      <div class="block" style="margin-top:1px">
+        <div class="pane">
+          <div class="pane-hd">Visual <span style="color:var(--teal)">■ present</span> &nbsp; <span style="color:var(--bd2)">■ absent</span></div>
+          <div class="att-dots" id="attDots"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────
+       PAGE 6 — GRADE SCALE
+  ───────────────────────────────────────────── -->
+  <div class="page" id="page-scale">
+    <div class="pg-head">
+      <h1>UCP Grade Scale</h1>
+      <p>Official University of Central Punjab grading policy and GPA point mapping.</p>
+    </div>
+
+    <div class="block">
+      <div class="pane">
+        <table>
+          <thead>
+            <tr><th>Letter</th><th>GPA Points</th><th>Percentage Range</th><th>Performance</th></tr>
+          </thead>
+          <tbody id="scaleBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DATA
+═══════════════════════════════════════════ */
+const SCALE = [
+  { l:'A',  gp:4.00, min:86, max:100, perf:'Excellent'  },
+  { l:'A-', gp:3.67, min:82, max:85,  perf:'Excellent'  },
+  { l:'B+', gp:3.33, min:78, max:81,  perf:'Very Good'  },
+  { l:'B',  gp:3.00, min:74, max:77,  perf:'Good'       },
+  { l:'B-', gp:2.67, min:70, max:73,  perf:'Good'       },
+  { l:'C+', gp:2.33, min:66, max:69,  perf:'Average'    },
+  { l:'C',  gp:2.00, min:62, max:65,  perf:'Average'    },
+  { l:'C-', gp:1.67, min:58, max:61,  perf:'Below Avg'  },
+  { l:'D+', gp:1.33, min:54, max:57,  perf:'Poor'       },
+  { l:'D',  gp:1.00, min:50, max:53,  perf:'Poor'       },
+  { l:'F',  gp:0.00, min:0,  max:49,  perf:'Fail'       },
+];
+
+const byPct    = p => SCALE.find(g => p >= g.min) || SCALE[SCALE.length - 1];
+const byLetter = l => SCALE.find(g => g.l === l);
+
+function gradeClass(l) {
+  if (l.startsWith('A')) return 'grade-A';
+  if (l.startsWith('B')) return 'grade-B';
+  if (l.startsWith('C')) return 'grade-C';
+  if (l.startsWith('D')) return 'grade-D';
+  return 'grade-F';
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR / HAMBURGER
+═══════════════════════════════════════════ */
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('overlay');
+  s.classList.toggle('open');
+  o.classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════ */
+const PAGE_TITLES = {
+  grade:   'Grade Calculator',
+  cgpa:    'CGPA Calculator',
+  predict: 'GPA Prediction',
+  whatif:  'What-If Simulator',
+  attend:  'Attendance Checker',
+  scale:   'Grade Scale',
+};
+
+document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-' + btn.dataset.tab).classList.add('active');
+    document.getElementById('topTitle').textContent = PAGE_TITLES[btn.dataset.tab];
+    closeSidebar();
+  });
+});
+
+/* ═══════════════════════════════════════════
+   GRADE SCALE TABLE
+═══════════════════════════════════════════ */
+document.getElementById('scaleBody').innerHTML = SCALE.map(g => `
+  <tr>
+    <td><span class="tag tag-teal ${gradeClass(g.l)}" style="background:none;padding:0;font-size:15px;font-weight:700">${g.l}</span></td>
+    <td style="font-family:var(--mono);font-weight:600;color:var(--txt)">${g.gp.toFixed(2)}</td>
+    <td style="font-family:var(--mono)">${g.l === 'F' ? 'Below 50' : g.min + '–' + g.max + '%'}</td>
+    <td>${g.perf}</td>
+  </tr>`).join('');
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+function removeRow(btn) { btn.parentElement.remove(); }
+
+function avgOf(inputs, outOf) {
+  const vals = [...inputs].map(i => parseFloat(i.value)).filter(v => !isNaN(v) && v >= 0);
+  return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length / outOf) * 100 : 0;
+}
+
+function getWeights() {
+  return {
+    quiz:   (+document.getElementById('w-quiz').value   || 10) / 100,
+    assign: (+document.getElementById('w-assign').value || 5)  / 100,
+    proj:   (+document.getElementById('w-proj').value   || 10) / 100,
+    mid:    (+document.getElementById('w-mid').value    || 30) / 100,
+    final:  (+document.getElementById('w-final').value  || 40) / 100,
+    part:   (+document.getElementById('w-part').value   || 5)  / 100,
+  };
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg || 'Copied to clipboard';
+  t.classList.remove('show');
+  void t.offsetWidth;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ═══════════════════════════════════════════
+   PAGE 1 — GRADE CALCULATOR
+═══════════════════════════════════════════ */
+let qC = 2, aC = 1;
+
+document.getElementById('addQuiz').addEventListener('click', () => {
+  qC++;
+  const r = document.createElement('div');
+  r.className = 'dyn-row';
+  r.innerHTML = `<input type="number" placeholder="Quiz ${qC}" min="0" max="10" step="0.1"><button class="rm-btn" onclick="removeRow(this)">−</button>`;
+  document.getElementById('quizInputs').appendChild(r);
+});
+
+document.getElementById('addAssign').addEventListener('click', () => {
+  aC++;
+  const r = document.createElement('div');
+  r.className = 'dyn-row';
+  r.innerHTML = `<input type="number" placeholder="Assignment ${aC}" min="0" max="10" step="0.1"><button class="rm-btn" onclick="removeRow(this)">−</button>`;
+  document.getElementById('assignInputs').appendChild(r);
+});
+
+document.getElementById('calcGrade').addEventListener('click', () => {
+  const w = getWeights();
+  const total = Object.values(w).reduce((a, b) => a + b, 0);
+  if (Math.abs(total - 1) > 0.005) {
+    document.getElementById('wTotal').textContent = Math.round(total * 100);
+    document.getElementById('wErr').style.display = 'block';
+    return;
+  }
+  document.getElementById('wErr').style.display = 'none';
+
+  const fV = parseFloat(document.getElementById('g-final').value);
+  if (isNaN(fV)) { showToast('⚠ Enter Final Term marks'); return; }
+
+  const qV  = avgOf(document.querySelectorAll('#quizInputs input'), 10);
+  const aV  = avgOf(document.querySelectorAll('#assignInputs input'), 10);
+  const pV  = parseFloat(document.getElementById('g-proj').value) || 0;
+  const mV  = parseFloat(document.getElementById('g-mid').value)  || 0;
+  const paV = parseFloat(document.getElementById('g-part').value) || 0;
+
+  const score = qV*w.quiz + aV*w.assign + pV*w.proj + mV*w.mid + fV*w.final + paV*w.part;
+  const pct = Math.round(score * 10) / 10;
+  const g = byPct(pct);
+
+  document.getElementById('rPct').textContent = pct + '%';
+  document.getElementById('rLetter').textContent = g.l;
+  document.getElementById('rLetter').className = 'r-grade ' + gradeClass(g.l);
+  document.getElementById('rGP').textContent = g.gp.toFixed(2);
+  document.getElementById('rStatus').textContent = g.l === 'F' ? 'FAIL' : 'PASS';
+  document.getElementById('rStatus').style.color = g.l === 'F' ? 'var(--red)' : 'var(--teal)';
+  document.getElementById('rPerf').textContent = g.perf;
+  document.getElementById('rBar').style.width = pct + '%';
+
+  const parts = [
+    ['Quiz',    (qV*w.quiz).toFixed(2)],
+    ['Assign',  (aV*w.assign).toFixed(2)],
+    ['Project', (pV*w.proj).toFixed(2)],
+    ['Mid',     (mV*w.mid).toFixed(2)],
+    ['Final',   (fV*w.final).toFixed(2)],
+    ['Part',    (paV*w.part).toFixed(2)],
+  ];
+  document.getElementById('breakdown').innerHTML = parts.map(([k, v]) =>
+    `<div class="bk-item"><span class="bk-k">${k}</span><span class="bk-v">${v}</span></div>`
+  ).join('');
+
+  document.getElementById('gradeResult').classList.add('show');
+  window._lastResult = { pct, letter: g.l, gp: g.gp, perf: g.perf };
+});
+
+document.getElementById('resetGrade').addEventListener('click', () => {
+  document.querySelectorAll('#page-grade input[type="number"]').forEach(i => i.value = '');
+  document.getElementById('gradeResult').classList.remove('show');
+  document.getElementById('wErr').style.display = 'none';
+});
+
+document.getElementById('shareBtn').addEventListener('click', () => {
+  if (!window._lastResult) { showToast('Calculate first'); return; }
+  const { pct, letter, gp, perf } = window._lastResult;
+  navigator.clipboard.writeText(
+    `UCP Grade Result\nScore: ${pct}%\nGrade: ${letter}\nGPA Points: ${gp}\nPerformance: ${perf}\n— Alpha UCP Calculator`
+  );
+  showToast('Result copied ✓');
+});
+
+/* ═══════════════════════════════════════════
+   PAGE 2 — CGPA CALCULATOR
+═══════════════════════════════════════════ */
+const gradeOpts = SCALE.map(g => `<option value="${g.l}">${g.l} — ${g.gp.toFixed(2)}</option>`).join('');
+
+function addCourseRow(name = '', ch = 3, gr = 'B+') {
+  const d = document.createElement('div');
+  d.className = 'course-row';
+  d.innerHTML = `
+    <input type="text" placeholder="Course name" value="${name}">
+    <input type="number" placeholder="3" min="1" max="6" value="${ch}" style="text-align:center">
+    <select>${gradeOpts}</select>
+    <button class="rm-btn" onclick="this.parentElement.remove()">−</button>`;
+  d.querySelector('select').value = gr;
+  document.getElementById('courseList').appendChild(d);
+}
+
+// Default sample courses
+[
+  ['Calculus', 3, 'B'],
+  ['OOP', 3, 'B+'],
+  ['Data Structures', 3, 'A-'],
+  ['Web Engineering', 3, 'A'],
+  ['Discrete Math', 2, 'B-'],
+].forEach(([n, c, g]) => addCourseRow(n, c, g));
+
+document.getElementById('addCourse').addEventListener('click', () => addCourseRow());
+
+document.getElementById('calcCGPA').addEventListener('click', () => {
+  const rows = document.querySelectorAll('#courseList .course-row');
+  let tQP = 0, tCH = 0, data = [];
+
+  rows.forEach(r => {
+    const name   = r.querySelector('input[type="text"]').value || 'Course';
+    const ch     = parseFloat(r.querySelector('input[type="number"]').value) || 0;
+    const letter = r.querySelector('select').value;
+    const g      = byLetter(letter);
+    if (!g || ch <= 0) return;
+    const qp = ch * g.gp;
+    tQP += qp; tCH += ch;
+    data.push({ name, ch, letter, gp: g.gp, qp });
+  });
+
+  if (!tCH) { showToast('No valid courses'); return; }
+  const cgpa = tQP / tCH;
+  const overallG = byPct(cgpa / 4 * 100);
+
+  document.getElementById('outCGPA').textContent = cgpa.toFixed(2);
+  document.getElementById('outTotalCH').textContent = tCH;
+  document.getElementById('outQP').textContent = tQP.toFixed(2);
+  document.getElementById('outGrade').textContent = overallG.l;
+
+  document.querySelector('#cgpaTable tbody').innerHTML =
+    data.map(d => `<tr>
+      <td>${d.name}</td>
+      <td style="font-family:var(--mono)">${d.ch}</td>
+      <td><span class="tag tag-teal">${d.letter}</span></td>
+      <td style="font-family:var(--mono)">${d.gp.toFixed(2)}</td>
+      <td style="font-family:var(--mono)">${d.qp.toFixed(2)}</td>
+    </tr>`).join('') +
+    `<tr class="total-row">
+      <td>Total</td>
+      <td style="font-family:var(--mono)">${tCH}</td>
+      <td>—</td><td>—</td>
+      <td style="font-family:var(--mono)">${tQP.toFixed(2)}</td>
+    </tr>`;
+
+  document.getElementById('cgpaOut').style.display = 'block';
+});
+
+document.getElementById('resetCGPA').addEventListener('click', () => {
+  document.getElementById('courseList').innerHTML = '';
+  document.getElementById('cgpaOut').style.display = 'none';
+});
+
+/* ═══════════════════════════════════════════
+   PAGE 3 — PREDICTION
+═══════════════════════════════════════════ */
+document.getElementById('calcPredict').addEventListener('click', () => {
+  const w = { quiz:.10, assign:.05, proj:.10, mid:.30, final:.40, part:.05 };
+  const qV  = (parseFloat(document.getElementById('p-quiz').value)   || 0) / 10 * 100;
+  const aV  = (parseFloat(document.getElementById('p-assign').value) || 0) / 10 * 100;
+  const pV  = parseFloat(document.getElementById('p-proj').value)  || 0;
+  const mV  = parseFloat(document.getElementById('p-mid').value)   || 0;
+  const paV = parseFloat(document.getElementById('p-part').value)  || 0;
+
+  const target = parseFloat(document.getElementById('p-target').value);
+  const known  = qV*w.quiz + aV*w.assign + pV*w.proj + mV*w.mid + paV*w.part;
+  const req    = (target - known) / w.final;
+  const tg     = byPct(target);
+
+  let disp, msg;
+  if (req <= 0) {
+    disp = 'Already secured';
+    msg  = `You already have enough marks to achieve ${tg.l} (${tg.gp.toFixed(2)} GPA) without the final exam.`;
+  } else if (req > 100) {
+    disp = 'Not achievable';
+    msg  = `${tg.l} cannot be reached even with 100% in the final. Consider targeting a lower grade.`;
+  } else {
+    const r = Math.ceil(req * 10) / 10;
+    disp = r + '%';
+    msg  = `Score at least ${r}% in your final exam to achieve ${tg.l} — ${tg.gp.toFixed(2)} GPA points (${tg.perf}).`;
+  }
+
+  document.getElementById('reqFinal').textContent = disp;
+  document.getElementById('predictMsg').textContent = msg;
+  document.getElementById('predictOut').style.display = 'block';
+});
+
+/* ═══════════════════════════════════════════
+   PAGE 4 — WHAT-IF SIMULATOR
+═══════════════════════════════════════════ */
+document.getElementById('runWhatIf').addEventListener('click', () => {
+  const w = { quiz:.10, assign:.05, proj:.10, mid:.30, final:.40, part:.05 };
+  const qV  = (parseFloat(document.getElementById('wi-quiz').value)   || 0) / 10 * 100;
+  const aV  = (parseFloat(document.getElementById('wi-assign').value) || 0) / 10 * 100;
+  const pV  = parseFloat(document.getElementById('wi-proj').value)  || 0;
+  const mV  = parseFloat(document.getElementById('wi-mid').value)   || 0;
+  const paV = parseFloat(document.getElementById('wi-part').value)  || 0;
+  const base = qV*w.quiz + aV*w.assign + pV*w.proj + mV*w.mid + paV*w.part;
+
+  const scores = [30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
+  document.getElementById('wiBody').innerHTML = scores.map(f => {
+    const total = Math.round((base + f * w.final) * 10) / 10;
+    const g = byPct(total);
+    const pass = g.l !== 'F';
+    const tagClass = pass ? 'tag-teal' : 'tag-red';
+    return `<tr>
+      <td style="font-family:var(--mono);font-weight:600;color:var(--txt)">${f}%</td>
+      <td style="font-family:var(--mono)">${total}%</td>
+      <td><span class="tag ${tagClass}">${g.l}</span></td>
+      <td style="font-family:var(--mono);color:${pass ? 'var(--teal)' : 'var(--red)'}">${g.gp.toFixed(2)}</td>
+      <td><span class="tag ${tagClass}" style="font-size:10px">${pass ? 'Pass' : 'Fail'}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('whatifOut').style.display = 'block';
+});
+
+/* ═══════════════════════════════════════════
+   PAGE 5 — ATTENDANCE
+═══════════════════════════════════════════ */
+document.getElementById('calcAtt').addEventListener('click', () => {
+  const total    = parseInt(document.getElementById('att-total').value);
+  const attended = parseInt(document.getElementById('att-attended').value);
+  if (isNaN(total) || isNaN(attended) || total <= 0 || attended < 0) {
+    showToast('⚠ Enter valid values'); return;
+  }
+  const pct    = Math.round((attended / total) * 1000) / 10;
+  const ok     = pct >= 75;
+  const absent = total - attended;
+  const canMiss  = Math.floor(total * 0.25) - absent;
+  const needMore = Math.ceil(0.75 * total - attended);
+
+  document.getElementById('attResult').innerHTML = `
+    <div class="notice ${ok ? 'ok' : 'bad'}">
+      ${ok ? '✓' : '⚠'} &nbsp; ${pct}% attendance — ${ok ? 'Eligible for Final Exam' : 'May be barred from Final Exam'}
+    </div>
+    <div style="margin-top:16px">
+      <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+        Attendance Rate
+      </div>
+      <div class="att-track">
+        <div class="att-fill ${ok ? 'ok' : 'bad'}" style="width:${Math.min(pct, 100)}%"></div>
+        <div class="att-marker"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px;font-family:var(--mono)">
+        <span>0%</span><span>${pct}%</span><span>100%</span>
+      </div>
+    </div>
+    <div style="margin-top:14px;font-size:12px;color:var(--muted)">
+      ${ok
+        ? `You can miss up to <strong style="color:var(--txt)">${Math.max(0, canMiss)}</strong> more class(es) and remain above 75%.`
+        : `You must attend <strong style="color:var(--txt)">${needMore}</strong> more class(es) to reach the 75% minimum.`
+      }
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--dim);font-family:var(--mono)">
+      ${attended} present · ${absent} absent · ${total} total
+    </div>`;
+
+  // Visual dots
+  document.getElementById('attDots').innerHTML =
+    Array.from({ length: Math.min(total, 200) }, (_, i) =>
+      `<div class="att-dot ${i < attended ? 'p' : 'a'}" title="${i < attended ? 'Present' : 'Absent'}"></div>`
+    ).join('') + (total > 200 ? `<span style="font-size:11px;color:var(--dim);align-self:center"> +${total-200} more</span>` : '');
+
+  document.getElementById('attVisualWrap').style.display = 'block';
+});
+
+document.getElementById('resetAtt').addEventListener('click', () => {
+  document.getElementById('att-total').value    = '';
+  document.getElementById('att-attended').value = '';
+  document.getElementById('attResult').innerHTML = '<div style="font-size:11px;color:var(--dim)">Enter attendance data and click Check.</div>';
+  document.getElementById('attVisualWrap').style.display = 'none';
+});
+</script>
+</body>
+</html>
